@@ -1,11 +1,7 @@
 import * as express from "express";
 import * as cors from "cors";
-import {
-  initializeApp,
-  // firestore,
-} from "firebase-admin";
-import {getTiles} from "./utils";
-initializeApp();
+import {getTiles, LandOwner, updateOwners} from "./utils";
+
 
 // const db = firestore();
 
@@ -39,5 +35,13 @@ app.get("/owners",
       // Send back a message that we've successfully written the message
       res.json({result: data});
     });
+
+app.post("/owner", async (req, res) => {
+  const data: [LandOwner] = req.body.owners;
+
+  await updateOwners(data);
+
+  res.json({result: data});
+});
 
 

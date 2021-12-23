@@ -1,21 +1,31 @@
+import {
+  initializeApp,
+  firestore,
+} from "firebase-admin";
+initializeApp();
 
+const db = firestore();
+
+const landOwners = db.collection("landOwner");
 
 const ZOOM = 18;
 const SCALE = 1 << ZOOM;
 
-export const getTiles = (south: number, west: number, north: number, east: number ) => {
-  const southWestPoint = project(south, west);
-  const northEastPoint = project(north, east);
+// eslint-disable-next-line max-len
+export const getTiles = async (south: number, west: number, north: number, east: number ) => {
+  const southEastPoint = project(south, east);
+  const northWestPoint = project(north, west);
 
 
-  const southWestTile = calculateTile(southWestPoint);
-  const northEastTile = calculateTile(northEastPoint);
+  const southEastTile = calculateTile(southEastPoint);
+  const northWestTile = calculateTile(northWestPoint);
 
 
-  console.log(southWestTile);
-  console.log(northEastTile);
+  await getOwnersInTiles(northWestTile, southEastTile);
+  console.log(southEastTile);
+  console.log(northWestTile);
 
-  return [southWestTile, northEastTile];
+  return [southEastTile, northWestTile];
 };
 
 const calculateTile = (point: PointType) => {
@@ -51,3 +61,41 @@ class PointType {
     this.y = y;
   }
 }
+
+export const getOwnersInTiles = async (northWest: PointType, southEast: PointType) => {
+  const landsQuerySnapshot = await landOwners.where("x", "<=", northWest.x)
+      .where("x", ">=", southEast.x)
+      .where("y", "<=", northWest.y)
+      .where("y", ">=", northWest.y)
+      .get();
+
+  landsQuerySnapshot.forEach((landSnapshot) => {
+    console.log(`Found document at ${landSnapshot.ref.path}`);
+  });
+};
+
+export class LandOwner {
+  x: number
+  y: number
+  owner: string
+
+  constructor(x:number, y:number, owner: string) {
+    this.x = x;
+    this.y = y;
+    this.owner = owner;
+  }
+}
+
+export const updateOwners = async (owners:[LandOwner]) => {
+  const bulkWriter = db.bulkWriter();
+  const documentRef = db.collection("landOwners").doc();
+
+  owners.forEach((owner) => {
+    bulkWriter.create(documentRef,
+        owner);
+  });
+
+  await bulkWriter.close();
+
+  console.log("Executed all writes");
+};
