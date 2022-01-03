@@ -2,11 +2,18 @@ import {
   initializeApp,
   firestore,
 } from "firebase-admin";
+import axios, {AxiosInstance} from "axios";
 initializeApp();
 
 const db = firestore();
 
-const landOwners = db.collection("landOwner");
+// const db = firestore();
+export const customAxios: AxiosInstance = axios.create({
+  baseURL: `${process.env.API_BASE_URL}`, // 기본 서버 주소 입력
+});
+// const GET_TILE_OWNERS_URL = `${process.env.API_BASE_URL}/lands/owners`;
+
+// const landOwners = db.collection("landOwner");
 
 const ZOOM = 18;
 const SCALE = 1 << ZOOM;
@@ -20,8 +27,6 @@ export const getTiles = async (south: number, west: number, north: number, east:
   const southEastTile = calculateTile(southEastPoint);
   const northWestTile = calculateTile(northWestPoint);
 
-
-  await getOwnersInTiles(northWestTile, southEastTile);
   console.log(southEastTile);
   console.log(northWestTile);
 
@@ -62,16 +67,17 @@ class PointType {
   }
 }
 
-export const getOwnersInTiles = async (northWest: PointType, southEast: PointType) => {
-  const landsQuerySnapshot = await landOwners.where("x", "<=", northWest.x)
-      .where("x", ">=", southEast.x)
-      .where("y", "<=", northWest.y)
-      .where("y", ">=", northWest.y)
-      .get();
-
-  landsQuerySnapshot.forEach((landSnapshot) => {
-    console.log(`Found document at ${landSnapshot.ref.path}`);
-  });
+// eslint-disable-next-line max-len
+export const getOwnersInTiles = async (token: string, northWest: PointType, southEast: PointType) => {
+  const response =
+    // eslint-disable-next-line max-len
+    await customAxios.get<any, any>(`/lands/owners?north=${northWest.y}&souht=${southEast.y}&west=${northWest.x}&east=${southEast.y}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+  return response;
 };
 
 export class LandOwner {
